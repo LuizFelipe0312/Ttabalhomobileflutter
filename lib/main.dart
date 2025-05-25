@@ -1,126 +1,252 @@
 import 'package:flutter/material.dart';
+import 'produto.dart'; // usa a classe definida externamente
 
-void main() {
-  runApp(MyApp());
+void main() => runApp(MyApp());
+
+class MyApp extends StatefulWidget {
+  @override
+  State<MyApp> createState() => _MyAppState();
 }
 
-class Produto {
-  final String nome;
-  final double preco;
-  final String imagemUrl;
+class _MyAppState extends State<MyApp> {
+  final List<Produto> produtos = [];
 
-  Produto(this.nome, this.preco, this.imagemUrl);
-}
-
-class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Carrinho de Compras',
-      home: CarrinhoPage(),
-      debugShowCheckedModeBanner: false,
+      title: 'Cadastro de Produtos',
+      home: CadastroProdutoPage(
+        onProdutoAdicionado: (produto) {
+          setState(() {
+            produtos.add(produto);
+          });
+        },
+        produtos: produtos,
+      ),
     );
   }
 }
 
-class CarrinhoPage extends StatefulWidget {
+class CadastroProdutoPage extends StatefulWidget {
+  final Function(Produto) onProdutoAdicionado;
+  final List<Produto> produtos;
+
+  CadastroProdutoPage({
+    required this.onProdutoAdicionado,
+    required this.produtos,
+  });
+
   @override
-  _CarrinhoPageState createState() => _CarrinhoPageState();
+  State<CadastroProdutoPage> createState() => _CadastroProdutoPageState();
 }
 
-class _CarrinhoPageState extends State<CarrinhoPage> {
-  List<Produto> produtos = [
-    Produto('Camiseta', 49.90, 'image/camiseta.jpg'),
-    Produto('Calça Jeans', 99.90, 'image/calca.jpg'),
-    Produto('Tênis', 199.90, 'image/tenis.jpg'),
-    Produto('Boné', 29.90, 'image/bone.jpg'),
-    Produto('Jaqueta', 149.90, 'image/jaqueta.jpg'),
-    Produto('Mochila', 89.90, 'image/mochila.jpg'),
-  ];
+class _CadastroProdutoPageState extends State<CadastroProdutoPage> {
+  final _formKey = GlobalKey<FormState>();
 
-  double total = 0.0;
-
-  void adicionarAoCarrinho(double preco) {
-    setState(() {
-      total += preco;
-    });
-  }
+  String nome = '', descricao = '', categoria = '', imagemUrl = '';
+  double precoCompra = 0, precoVenda = 0, desconto = 0;
+  int quantidade = 0;
+  bool ativo = false, promocao = false;
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        appBar: AppBar(title: Text('Carrinho de Compras')),
-        body: Padding(
-          padding: EdgeInsets.all(10),
-          child: GridView.builder(
-            itemCount: produtos.length,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 1.2, // Ajustado para reduzir altura dos cards
+    return Scaffold(
+      backgroundColor: Colors.grey[200], // ✅ Cor de fundo clara
+      appBar: AppBar(title: Text("Cadastrar Produto")),
+      body: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              TextFormField(
+                decoration: InputDecoration(labelText: "Nome"),
+                validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
+                onSaved: (v) => nome = v!,
+              ),
+              TextFormField(
+                decoration: InputDecoration(labelText: "Preço de Compra"),
+                keyboardType: TextInputType.number,
+                validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
+                onSaved: (v) => precoCompra = double.parse(v!),
+              ),
+              TextFormField(
+                decoration: InputDecoration(labelText: "Preço de Venda"),
+                keyboardType: TextInputType.number,
+                validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
+                onSaved: (v) => precoVenda = double.parse(v!),
+              ),
+              TextFormField(
+                decoration: InputDecoration(labelText: "Quantidade"),
+                keyboardType: TextInputType.number,
+                validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
+                onSaved: (v) => quantidade = int.parse(v!),
+              ),
+              TextFormField(
+                decoration: InputDecoration(labelText: "Descrição"),
+                validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
+                onSaved: (v) => descricao = v!,
+              ),
+              TextFormField(
+                decoration: InputDecoration(labelText: "Categoria"),
+                onSaved: (v) => categoria = v ?? '',
+              ),
+              TextFormField(
+                decoration: InputDecoration(labelText: "Imagem (URL)"),
+                onSaved: (v) => imagemUrl = v ?? '',
+              ),
+              SwitchListTile(
+                title: Text("Produto Ativo"),
+                value: ativo,
+                onChanged: (val) => setState(() => ativo = val),
+              ),
+              CheckboxListTile(
+                title: Text("Em Promoção"),
+                value: promocao,
+                onChanged: (val) => setState(() => promocao = val ?? false),
+              ),
+              Text("Desconto: ${desconto.toStringAsFixed(0)}%"),
+              Slider(
+                min: 0,
+                max: 100,
+                value: desconto,
+                onChanged: (val) => setState(() => desconto = val),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (_formKey.currentState!.validate()) {
+                    _formKey.currentState!.save();
+                    Produto novo = Produto(
+                      nome: nome,
+                      precoCompra: precoCompra,
+                      precoVenda: precoVenda,
+                      quantidade: quantidade,
+                      descricao: descricao,
+                      categoria: categoria,
+                      imagemUrl: imagemUrl,
+                      ativo: ativo,
+                      promocao: promocao,
+                      desconto: desconto,
+                    );
+                    widget.onProdutoAdicionado(novo);
+
+                    // ✅ Mostra mensagem de sucesso
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text("✅ Produto cadastrado com sucesso!"),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+
+                    // ✅ Navega para a tela de listagem
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (_) => ListaProdutosPage(produtos: widget.produtos),
+                      ),
+                    );
+                  }
+                },
+                child: Text("Cadastrar Produto"),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ListaProdutosPage extends StatelessWidget {
+  final List<Produto> produtos;
+
+  ListaProdutosPage({required this.produtos});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Lista de Produtos")),
+      body: ListView.builder(
+        itemCount: produtos.length,
+        itemBuilder: (context, index) {
+          final p = produtos[index];
+          return ListTile(
+            leading: Image.network(
+              p.imagemUrl,
+              width: 50,
+              height: 50,
+              errorBuilder: (c, e, s) => Icon(Icons.broken_image),
             ),
-            itemBuilder: (context, index) {
-              final produto = produtos[index];
-              return Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: EdgeInsets.all(10),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        produto.imagemUrl,
-                        height: 120,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    Text(
-                      produto.nome,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'R\$ ${produto.preco.toStringAsFixed(2)}',
-                      style: TextStyle(fontSize: 14),
-                    ),
-                    SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: () => adicionarAoCarrinho(produto.preco),
-                      child: Text('Adicionar'),
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        textStyle: TextStyle(fontSize: 12),
-                      ),
-                    ),
-                  ],
+            title: Text(p.nome),
+            subtitle: Text("R\$ ${p.precoVenda.toStringAsFixed(2)}"),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DetalhesProdutoPage(produto: p),
                 ),
               );
             },
-          ),
-        ),
-        bottomNavigationBar: Container(
-          padding: EdgeInsets.all(16),
-          color: Colors.blueGrey[100],
-          child: Text(
-            'Total: R\$ ${total.toStringAsFixed(2)}',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class DetalhesProdutoPage extends StatelessWidget {
+  final Produto produto;
+
+  DetalhesProdutoPage({required this.produto});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Detalhes do Produto")),
+      body: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: ListView(
+          children: [
+            Image.network(
+              produto.imagemUrl,
+              height: 200,
+              errorBuilder: (c, e, s) => Icon(Icons.broken_image, size: 200),
+            ),
+            SizedBox(height: 10),
+            Text(
+              "Nome: ${produto.nome}",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            Text("Categoria: ${produto.categoria}"),
+            Text("Descrição: ${produto.descricao}"),
+            Text("Preço de Compra: R\$ ${produto.precoCompra}"),
+            Text("Preço de Venda: R\$ ${produto.precoVenda}"),
+            Text("Quantidade: ${produto.quantidade}"),
+            Text("Desconto: ${produto.desconto.toStringAsFixed(0)}%"),
+            Row(
+              children: [
+                Icon(
+                  produto.ativo ? Icons.check_circle : Icons.cancel,
+                  color: produto.ativo ? Colors.green : Colors.red,
+                ),
+                SizedBox(width: 5),
+                Text(produto.ativo ? "Ativo" : "Inativo"),
+              ],
+            ),
+            Row(
+              children: [
+                Icon(
+                  produto.promocao
+                      ? Icons.local_offer
+                      : Icons.remove_circle_outline,
+                  color: produto.promocao ? Colors.orange : Colors.grey,
+                ),
+                SizedBox(width: 5),
+                Text(produto.promocao ? "Em promoção" : "Sem promoção"),
+              ],
+            ),
+          ],
         ),
       ),
     );
